@@ -1,175 +1,151 @@
-import Ship from "./battleship";
+import Ship from "./ship";
+import shipTypes from "../helper";
 
-class Gameboard {
+
+
+class Gameboard{
   constructor(){
-       this.board = Array.from({ length: 10}, () => Array(10).fill(null)); //10x10 grid
-       this.ships = [];
-       this.missedAttacks = new Set();
-       this.successfulAttacks = new Set();
-  } 
+    this.board = new Array(10).fill(0).map(() => new Array(10).fill(0).map(() => ({ship: null, beenHit: false})));
+    this.axis = "x";
+    this.fleet = [];
+    this.shipsYetToBePlaced = ["carrier","battleship","frigate","submarine","scout"];
+    this.activeShipToBePlaced = "";
+  }
 
-  placeShip(ship, row, col, isVertical = false){
-    const shipLength = ship.length;
-    const boardSize = 10;
+  printBoard(){
+    this.board.forEach(row => {
+      console.log(row)
+    });
+  }
 
-    let positions = [];
+  getBoard(){
+    return this.board;
+  }
 
-    if(isVertical){
-      // try placing downward first
-      if(row + shipLength <= boardSize){
-        for (let i = 0; i < shipLength; i++){
-          positions.push({ row: row + i, col});
-        }}
-        else if(row - shipLength +1 >= 0){
-          for(let i = 0; i < shipLength; i++){
-            positions.push({row: row -i, col});
-          }
-        }else{
+  getShip(name){
+    return this.fleet.find(ship => ship.name === name);
+  }
+
+  getFleet(){
+    return this.fleet;
+  }
+
+  getCellBeenHit(x,y){
+    return this.board[y][x].beenHit;
+  }
+
+  getActiveShipToBePlaced(){
+    return this.activeShipToBePlaced;
+  }
+  setActiveShipToBePlaced(shipName){
+    const shipIndex = this.shipsYetToBePlaced.findIndex(item => item === shipName);
+    if(shipIndex < 0) return;
+    this.activeShipToBePlaced = shipName;
+  }
+  changeAxis(){
+    this.axis = this.axis === "x" ? "y" : "x";
+  }
+
+  createShip(shipName){
+    const shipIndex = this.shipsYetToBePlaced.findIndex(item => item === shipName);
+    if(shipIndex < 0) return;
+
+    const ship = new Ship(shipName);
+    //de mai gandit aici. poate vreau sa fac this.shipsYetToBePlaced un array de objecte cu nume si count pt o flota mai flexibila?
+    this.shipsYetToBePlaced.splice(shipIndex,1);
+    this.fleet.push(ship);
+    this.activeShipToBePlaced = "";
+
+    return ship;
+  }
+
+  isGoodPosForPlacement(x,y,shipSize, axis = this.axis){
+
+    if(x < 0 || x > 9 || y < 0 || y > 9){
+      return false;
+    }
+    if(axis === "x" && x + shipSize - 1 > 9){
+      return false;
+    }
+    if(axis === "y" && y + shipSize - 1 > 9){
+      return false;
+    }
+
+    if(axis === "x"){
+      for(let i = x; i < x + shipSize; i++ ){
+        if(this.board[y][i].ship !== null){
           return false;
         }
-      
-    }else{
-      if(col + shipLength <= boardSize){
-        for(let i = 0;i < shipLength; i++){
-          positions.push({row, col:col + i})
-        }}else if(col -shipLength + 1 >=0){
-          for (let i = 0; i < shipLength; i++){
-            positions.push({row, col: col - i});
-          }
-        }else{
+      }
+    } else if(axis === "y"){
+      for(let i = y; i < y + shipSize; i++ ){
+        if(this.board[i][x].ship !== null){
           return false;
         }
       }
-      if(positions.length !== shipLength){
-        return false;
-      }
-      // checking for overlapping
-      for(const pos of positions){
-         // check if the cell is already occupied or not
-        if(this.board[pos.row][pos.col] !== null) return false;
-
-        // check if adjacent cells are occupied or not
-        const surroundingCells = this.getSurroundingCells(pos.row, pos.col);
-        for(const [adjRow, adjCol] of surroundingCells){
-          if(this.board[adjRow][adjCol] !== null) return false;
-        }
-      }
-      for(const pos of positions){
-        this.board[pos.row][pos.col] = ship;
-      }
-       
-      this.ships.push(ship);
-      return true;
-  }
-
-  receiveAttack(row, col){
-    const coordinate = `${row},${col}`;
-    if(
-      this.missedAttacks.has(coordinate) || this.successfulAttacks.has(coordinate)){
-        return null;
-      }
-    
-      const target = this.board[row][col];
-      if(target instanceof Ship){
-        target.hit();
-        this.successfulAttacks.add(coordinate);
-        return true;
-      }else{
-        this.missedAttacks.add(coordinate);
-        return false;
-      }
-  }
-  placeRandomly(){
-    const ShipLengths = [5, 4, 3, 3, 2];
-    for(const length of ShipLengths){
-        let placed = false;
-        while(!placed){
-          const row = Math.floor(Math.random() * 10);
-          const col = Math.floor(Math.random() * 10);
-          const isVertical = Math.random() < 0.5;
-          const ship = new Ship(length);
-          placed = this.placeShip(ship, row, col, isVertical);
-        }
-    } 
-  }
-
-  getEmptyCells(){
-    let emptyCells = 0;
-    for(let i = 0; i < 10; i++){
-      for(let j = 0; i < 10; j++){
-        if(this.board[i][j] === null) emptyCells++;
-      }
     }
-    return emptyCells;
+    return true;
   }
 
-  checkWin(){
-    return this.ships.every((ship) => ship.isSunk);
-  }
+  placeShip(shipName, pos, axis = this.axis){
+    const [x, y] = pos;
+    const shipSize = shipTypes.find(item => item.name === shipName).size;
 
-  getShipCoordinates(){
-    const shipCoords = [];
-
-    for(let row = 0; row < this.board.length; row++){
-      for(let col = 0; col < this.board[row].length; col++){
-        if(this.board[row][col] instanceof Ship){
-          shipCoords.push([row, col]);
-        }
-      }
-    }
-    return shipCoords;
-  }
-
-  getAdjacent(row, col){
-    const adjacent = [];
-
-    const directions = [
-      { row: -1, col: 0},
-      { row: 1, col: 0},
-      { row: 0, col: -1},
-      { row: 0, col: 1},
-    ];
-
-    for (const dir of directions){
-      const newRow = row + dir.row;
-      const newCol = col + dir.col;
-
-      if( newRow >= 0 && newRow < 10 && newCol >= 0 && newCol < 10){
-        adjacent.push([newRow, newCol]);
-      }
-    }
-
-    return adjacent;
-  }
-
-  getSurroundingCells(row, col){
-    const surrounding = [];
-
-    for( let r= row -1; r <= row + 1; r++){
-      for( let c = col -1; c <= col + 1; c++){
-        if(
-          r >= 0 &&
-          r < 10 &&
-          c >= 0 &&
-          c < 10 &&
-          !(r === row && c === col)
-        ){
-          surrounding.push([r, c]);
-        }
-      }
-    }
-
-    return surrounding;
-  }
-
-  reset(){
-    this.board = Array.from({ length: 10}, () => Array(10).fill(null));
-    this.ships = [];
-    this.missedAttacks.clear();
-    this.successfulAttacks.clear();
-  }
-
+    if(!this.isGoodPosForPlacement(x,y,shipSize,axis)) return;
   
+    const ship = this.createShip(shipName);
+    if(!ship) return;
+
+    if(axis === "x"){
+      for(let i = x; i < x + shipSize; i++ ){
+        this.board[y][i].ship = shipName;
+      }
+    } else if(axis === "y"){
+      for(let i = y; i < y + shipSize; i++ ){
+        this.board[i][x].ship = shipName;
+      }
+    }
+    return 1;
+  }
+
+  handleHit(x,y){
+    if(this.board[y][x].ship === null)
+      return "miss";
+
+    const attackedShip = this.getShip(this.board[y][x].ship);
+    const attackResult = attackedShip.hit();
+    return {name: attackedShip.getName(), attackResult};
+  }
+
+  takeHit(x,y){
+    this.board[y][x].beenHit = true;
+
+    return this.handleHit(x,y);
+  }
+
+  areAllShipsSunk(){
+    return this.fleet.every(ship => ship.getIsSunk());
+  }
+
+  getOpponentView(){
+    const board = this.board.map(row => {
+      return row.map(cell => {
+        const modifiedCell = {ship: null, beenHit: false};
+        if(cell.ship !== null && cell.beenHit){
+          modifiedCell.ship = "hit";
+          modifiedCell.beenHit = true;
+        } else if(cell.ship === null && cell.beenHit){
+          modifiedCell.ship = "miss";
+          modifiedCell.beenHit = true;
+        } else {
+          modifiedCell.ship = null;
+          modifiedCell.beenHit = false;
+        }
+        return modifiedCell;
+      });
+    });
+    return board;
+  }
 }
 
 export default Gameboard;

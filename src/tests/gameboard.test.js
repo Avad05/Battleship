@@ -1,116 +1,54 @@
-import Gameboard from '../gameboard.js';
-import Ship from '../modules/battleship.js';
+import Gameboard from "../modules/gameboard";
+import Ship from "../modules/ship";
 
-describe('Placing a ship on the board', () => {
-  let gameboard;
+describe("Gameboard object", () => {
+  const maboard = new Gameboard();
+  const maship = maboard.createShip("frigate");
 
-  beforeEach(() => {
-    gameboard = new Gameboard(); // Create a new gameboard before each test
+  test("should exist", () => {
+    expect(maboard).toBeDefined();
   });
-
-  test('Ship is placed horizontally', () => {
-    const ship = new Ship(3);
-    const result = gameboard.placeShip(ship, 0, 0, false);
-    expect(result).toBe(true);
-    expect(gameboard.board[0][0]).toBe(ship);
-    expect(gameboard.board[0][1]).toBe(ship);
-    expect(gameboard.board[0][2]).toBe(ship);
-    expect(gameboard.ships).toContain(ship);
+  test("should have a board property that's an array", () => {
+    expect(maboard).toHaveProperty("board");
+    expect(Array.isArray(maboard.board)).toBe(true);
   });
-
-  test('Ship is placed vertically', () => {
-    const ship = new Ship(3);
-    const result = gameboard.placeShip(ship, 0, 0, true);
-    expect(result).toBe(true);
-    expect(gameboard.board[0][0]).toBe(ship);
-    expect(gameboard.board[1][0]).toBe(ship);
-    expect(gameboard.board[2][0]).toBe(ship);
-    expect(gameboard.ships).toContain(ship);
+  test("should have an axis property of type string that has an initial value of 'x'", () => {
+    expect(maboard).toHaveProperty("axis");
+    expect(typeof maboard.axis).toBe("string");
+    expect(maboard.axis).toBe("x");
   });
-
-  test('Ship placement fails if it overlaps with another ship', () => {
-    const ship1 = new Ship(3);
-    const ship2 = new Ship(2);
-    gameboard.placeShip(ship1, 0, 0, false);
-
-    const result = gameboard.placeShip(ship2, 0, 1, false); // Overlapping
-    expect(result).toBe(false);
+  test("should have a fleet property that's an array", () => {
+    expect(maboard).toHaveProperty("fleet");
+    expect(Array.isArray(maboard.fleet)).toBe(true);
   });
-
-  test('Ship placement fails due to adjacent ships', () => {
-    const ship1 = new Ship(3);
-    const ship2 = new Ship(2);
-    gameboard.placeShip(ship1, 0, 0, false);
-
-    const result = gameboard.placeShip(ship2, 1, 0, true); // Adjacent
-    expect(result).toBe(false);
+  test("should have a shipsYetToBePlaced property that's an array", () => {
+    expect(maboard).toHaveProperty("shipsYetToBePlaced");
+    expect(Array.isArray(maboard.shipsYetToBePlaced)).toBe(true);
   });
-});
-
-describe('Receiving attacks', () => {
-  let gameboard;
-
-  beforeEach(() => {
-    gameboard = new Gameboard();
+  test("should have an activeShipToBePlaced property of type string", () => {
+    expect(maboard).toHaveProperty("activeShipToBePlaced");
+    expect(typeof maboard.activeShipToBePlaced).toBe("string");
   });
-
-  test('Attack misses and save coorinates', () => {
-    const ship = new Ship(3);
-    gameboard.placeShip(ship, 0, 0, false);
-    const result = gameboard.receiveAttack(5, 5);
-    gameboard.receiveAttack(5, 6);
-    gameboard.receiveAttack(5, 7);
-    expect(result).toBe(false);
-    expect(gameboard.missedAttacks).toContain('5,5');
-    expect(gameboard.missedAttacks).toContain('5,6');
-    expect(gameboard.missedAttacks).toContain('5,7');
+  test("should change the axis on changeAxis() call", () => {
+    maboard.changeAxis();
+    expect(maboard.axis).toBe("y");
   });
-
-  test('Attack hits and sinks a ship', () => {
-    const ship = new Ship(3);
-    gameboard.placeShip(ship, 0, 0, false);
-    const result = gameboard.receiveAttack(0, 0);
-    expect(result).toBe(true);
-    expect(ship.isSunk).toBe(false); // Ship should not be sunk yet
-    gameboard.receiveAttack(0, 1);
-    gameboard.receiveAttack(0, 2);
-    expect(ship.isSunk).toBe(true); // Ship should be sunk now
-    expect(gameboard.successfulAttacks).toContain('0,0');
-    expect(gameboard.successfulAttacks).toContain('0,1');
-    expect(gameboard.successfulAttacks).toContain('0,2');
-    expect(gameboard.ships[0].isSunk).toBe(true);
+  test("should create a Ship instance on createShip() call", () => {
+    expect(maship).toBeInstanceOf(Ship);
   });
-});
-
-describe('Placing ships randomly and check win condition', () => {
-  let gameboard;
-
-  beforeEach(() => {
-    gameboard = new Gameboard();
+  test("should return a boolean value that says if a ship can be placed in a certain spot or not", () => {
+    expect(maboard.isGoodPosForPlacement(0,0,3,"x")).toBe(true);
+    expect(maboard.isGoodPosForPlacement(9,9,3,"x")).toBe(false);
   });
-
-  test('Randomly place 5 ships', () => {
-    gameboard.placeRandomly();
-    expect(gameboard.getEmptyCells()).toBe(83);
-    expect(gameboard.ships.length).toBe(5);
+  test("should return 1 if placed a ship successfully and undefined otherwise", () => {
+    expect(maboard.placeShip("submarine", [0,1], "x")).toBe(1);
+    expect(maboard.placeShip("scout", [9,9], "x")).toBeUndefined();
   });
-
-  test('Check if all ships are sunk', () => {
-    const ship1 = new Ship(3);
-    const ship2 = new Ship(2);
-    gameboard.placeShip(ship1, 0, 0, false);
-    gameboard.placeShip(ship2, 2, 0, true);
-
-    // Sink the ships
-    gameboard.receiveAttack(0, 0);
-    gameboard.receiveAttack(0, 1);
-    gameboard.receiveAttack(0, 2);
-    gameboard.receiveAttack(2, 0);
-    gameboard.receiveAttack(3, 0);
-
-    expect(gameboard.checkWin()).toBe(true);
-    for (let ship of gameboard.ships) {
-      expect(ship.isSunk).toBe(true);
-    }
+  test("should return the result of the attack", () => {
+    expect(maboard.takeHit(0,1).attackResult).toBe("hit");
+    expect(maboard.takeHit(2,8)).toBe("miss");
+  });
+  test("should return a modified version of the board for the opponent to see", () => {
+    expect(Array.isArray(maboard.getOpponentView())).toBe(true);
   });
 });
