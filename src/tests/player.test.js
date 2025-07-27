@@ -1,62 +1,64 @@
-import Ship from '../modules/battleship.js';
-import Player from '../modules/player.js';
+import Player from "../modules/player";
+import Gameboard from "../modules/gameboard";
 
-describe('Player Attacking:', () => {
-  let player1, player2;
+describe("Gameboard object", () => {
+  const player1 = new Player("dingus", "human");
+  const player2 = new Player("john", "computer");
+  player1.setOpponent(player2);
+  player2.setOpponent(player1);
+  player1.gameboard.placeShip("scout", [2,2], "x");
+  player2.gameboard.placeShip("frigate", [1,1], "x");
 
-  beforeEach(() => {
-    player1 = new Player('John');
-    player2 = new Player('AI', true);
+
+  test("should exist", () => {
+    expect(player1).toBeDefined();
   });
-
-  test('Attacking specific coordinates no ship', () => {
-    player1.attack(0, 0, player2);
-    expect(player2.gameboard.missedAttacks.has('0,0')).toBe(true);
+  test("should have a name property of type string", () => {
+    expect(player1).toHaveProperty("name");
+    expect(typeof player1.name).toBe("string");
   });
-
-  test('Attacking specific coordinates with ship', () => {
-    const ship = new Ship(4);
-    player2.gameboard.placeShip(ship, 0, 0, false);
-    player1.attack(0, 0, player2);
-    expect(player2.gameboard.successfulAttacks.has('0,0')).toBe(true);
-    expect(ship.isSunk).toBe(false);
+  test("should have a gameboard property that's an array", () => {
+    expect(player1).toHaveProperty("gameboard");
+    expect(player1.gameboard).toBeInstanceOf(Gameboard);
   });
-
-  test('AI attacking randomly', () => {
-    player2.randomAttack(player1);
-    expect(player1.gameboard.missedAttacks.size).toBeGreaterThan(0);
+  test("should have a nextTargetCells property that's an array", () => {
+    expect(player1).toHaveProperty("nextTargetCells");
+    expect(Array.isArray(player1.nextTargetCells)).toBe(true);
   });
-
-  test('AI smart attack', () => {
-    const ship = new Ship(5);
-    player1.gameboard.placeShip(ship, 0, 0, false);
-    player2.attack(0, 0, player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    expect(player1.gameboard.successfulAttacks.size).toBeGreaterThan(3);
-    expect(ship.hits).toBeGreaterThan(3);
+  test("should have an opponent property", () => {
+    expect(player1).toHaveProperty("opponent");
   });
+  test("should have an intelligence property of type string", () => {
+    expect(player1).toHaveProperty("intelligence");
+    expect(typeof player1.intelligence).toBe("string");
+  });
+  test("should return the result of the attack if able to perform one, or undefined otherwise", () => {
+    let attackHit = player2.attack(2,2);
+    let attackMiss = player2.attack(1,2);
+    let attackSunk = player2.attack(3,2);
 
-  test('AI smart attack sunk ship and chase another', () => {
-    const ship1 = new Ship(2);
-    const ship2 = new Ship(3);
-    player1.gameboard.placeShip(ship1, 1, 2, false);
-    player1.gameboard.placeShip(ship2, 5, 0, true);
-    player2.attack(1, 2, player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    expect(ship1.isSunk).toBe(true);
-    player2.attack(5, 0, player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    player2.smartAttack(player1);
-    expect(ship2.isSunk).toBe(true);
-    expect(player1.gameboard.checkWin()).toBe(true);
+    expect(attackHit.attackResult).toBe("hit");
+    expect(attackMiss).toBe("miss");
+    expect(attackSunk.attackResult).toBe("sunk");
+    expect(player2.attack(4,2)).toBeUndefined();
+  });
+  test("should return a pair of coordinates for the computer player to attack", () => {
+    const arr = player2.computerChooseCell();
+
+    expect(Array.isArray(arr)).toBe(true);
+    expect(arr[0]).toBeLessThan(10);
+    expect(arr[1]).toBeLessThan(10);
+    expect(arr[0]).toBeGreaterThan(-1);
+    expect(arr[1]).toBeGreaterThan(-1);
+  });
+  test("should return a suitable random pair of coordinates and an axis value for the computer player to place its ships", () => {
+    const arr = player2.getRandomSuitableLocation(5);
+
+    expect(Array.isArray(arr)).toBe(true);
+    expect(arr[0]).toBeLessThan(10);
+    expect(arr[1]).toBeLessThan(10);
+    expect(arr[0]).toBeGreaterThan(-1);
+    expect(arr[1]).toBeGreaterThan(-1);
+    expect(typeof arr[2]).toBe("string")
   });
 });

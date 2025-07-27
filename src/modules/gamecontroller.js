@@ -1,78 +1,73 @@
-import Ship from "./battleship";
+import Player from "./player";
 
-class GameController {
-  constructor(player1, player2, gameMode){
-       this.player1 = player1;
-       this.player2 = player2;
-       this.currentPlayer = player1;
-       this.opponent = player2;
-       this.gameMode = gameMode;
-       this.difficulty = 'normal';
-       this.shipsToPlace = [5, 4, 3, 3, 2]; //length of ships to place
-       this.currentShipIndex = 0;
-       this.isGameOver = false;
-       this.winner = null;
-  }
-     
-  shipPlacement(player, row = null, col = null, isVertical = false){
-    if(player.isAI){
-      player.gameboard.placeRandomly();
-      return true;
-    }
-
-    const shipLength = this.shipsToPlace[this.currentShipIndex];
-    const ship = new Ship(shipLength);
-    const placed = player.gameboard.placeShip(ship, row, col, isVertical);
-
-    if(placed){
-      this.currentShipIndex++;
-      if(this.currentShipIndex >= this.shipsToPlace.length){
-        this.placementPhase = false;
-        this.currentShipIndex = 0;
-      }
-      return true;
-    }
-    return false;
-  }
-
-  handleTurn(row, col){
-    const attacker = this.currentPlayer;
-    const opponent = this.opponent;
-    let result;
-
-    if(attacker.isAI){
-      result = 
-      this.difficulty === 'hard'
-      ? attacker.smartAttack(opponent)
-      : attacker.randomAttack(opponent);
-    }else{
-      result = attacker.attack(row, col, opponent);
-    }
-
-    if(opponent.gameboard.checkWin()){
-      this.isGameOver = true;
-      this.winner = attacker.name;
-    }
-
-    this.swapTurns();
-    return result;
-  }
-
-  swapTurns(){
-    [this.currentPlayer, this.opponent] = [this.opponent, this.currentPlayer];
-  }
-
-  resetGame(){
-    this.player1.gameboard.reset();
-    this.player2.gameboard.reset();
-    this.currentPlayer = this.player1;
-    this.opponent = this.player2;
-    this.currentShipIndex = 0;
-    this.placementPhase = true;
-    this.isGameOver = false;
+class Game{
+  constructor(){
+    this.player1 = null;
+    this.player2 = null;
     this.winner = null;
+    this.turn = "player1";
+    this.battleReady = false;
+    this.over = false;
+  }
+
+  init(p1Name, p2Name){
+    this.player1 = new Player(p1Name, "human");
+    this.player2 = new Player(p2Name, "computer");
+    this.player1.setOpponent(this.player2);
+    this.player2.setOpponent(this.player1);
+  }
+
+  getPlayer1(){
+    return this.player1;
+
+  }
+
+  getPlayer2(){
+    return this.player2;
+  }
+
+  getTurn(){
+    return this.turn;
+  }
+
+  getWinner(){
+    return this.winner;
+  }
+
+  changeTurn(){
+     this.turn = this.turn === "player1" ? "player2" : "player1";
+  }
+   
+  setBattleReady(){
+    this.battleReady = true;
+  }
+
+  getBattleReady(){
+    return this.battleReady;
+  }
+
+   isOver(){
+    return this.over;
+  }
+
+  checkForWin(){
+    if(this.player1.gameboard.areAllShipsSunk()){
+      this.over = true;
+      this.winner = this.player2;
+    }
+
+    if(this.player2.gameboard.areAllShipsSunk()){
+      this.over = true;
+      this.winner = this.player2;
+    }
+
+    if(this.player2.gameboard.areAllShipsSunk()){
+      this.over = true;
+      this.winner = this.player1;
+    }
+
   }
 
 }
 
-export default GameController;
+export default Game;

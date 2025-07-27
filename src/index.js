@@ -1,3 +1,2 @@
-import { startGame } from '../ui/dom.js'
-
-startGame();
+import "./battleship.css";
+import "./ui/dom.js"

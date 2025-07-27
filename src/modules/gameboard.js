@@ -51,7 +51,7 @@ class Gameboard{
     if(shipIndex < 0) return;
 
     const ship = new Ship(shipName);
-    //de mai gandit aici. poate vreau sa fac this.shipsYetToBePlaced un array de objecte cu nume si count pt o flota mai flexibila?
+    
     this.shipsYetToBePlaced.splice(shipIndex,1);
     this.fleet.push(ship);
     this.activeShipToBePlaced = "";
